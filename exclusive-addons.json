@@ -1,0 +1,33 @@
+{
+  "updated": "2026-09-20",
+  "addons": [
+    {
+      "name": "JasonWoWAdditions",
+      "repo": "Crybb227/JWoW-Exclusive-Addons",
+      "folder": "JasonWoWAdditions",
+      "description": "Campaign progression front end for the server's .progress system. Type /prog to open.",
+      "imageUrl": ""
+    },
+    {
+      "name": "NemesisTracker",
+      "repo": "Crybb227/JWoW-Exclusive-Addons",
+      "folder": "NemesisTracker",
+      "description": "Companion addon for mod-nemesis-system: tracks affixes, map overlays, and nemesis encounters.",
+      "imageUrl": ""
+    },
+    {
+      "name": "DungeonClear",
+      "repo": "Crybb227/JWoW-Exclusive-Addons",
+      "folder": "DungeonClear",
+      "description": "Autonomous dungeon-clearing companion for mod-dungeon-clear.",
+      "imageUrl": ""
+    },
+    {
+      "name": "Chatter",
+      "repo": "Crybb227/JWoW-Exclusive-Addons",
+      "folder": "Chatter",
+      "description": "Companion UI for mod-llm-chatter bot traits and tone.",
+      "imageUrl": "https://raw.githubusercontent.com/Crybb227/JWoW-Exclusive-Addons/main/Chatter/images/chatter.png"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+## Interface: 30300
+## Title: JasonWoWAdditions
+## Notes: Campaign progression front end for the server's .progress system. Type /prog to open.
+## Author: Jason
+## Version: 1.0.0
+## SavedVariables: JasonWoWAdditionsDB
+
+Core.lua
+Protocol.lua
+Comm.lua
+Model.lua
+UI\Main.lua
+UI\Overview.lua
+UI\Campaign.lua
+UI\Nemesis.lua
+UI\Tracking.lua
+UI\Stats.lua
+UI\Options.lua
