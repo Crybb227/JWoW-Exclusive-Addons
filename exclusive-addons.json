@@ -13,7 +13,19 @@
       "repo": "Crybb227/JWoW-Exclusive-Addons",
       "folder": "NemesisTracker",
       "description": "Companion addon for mod-nemesis-system: tracks affixes, map overlays, and nemesis encounters.",
-      "imageUrl": ""
+      "imageUrl": "",
+      "recommends": [
+        {
+          "name": "TomTom",
+          "downloadUrl": "https://warperia.com/wp-content/uploads/2024/11/ww-wotlk-tomtom.zip",
+          "description": "Navigation waypoints and coordinates, used by NemesisTracker's map overlay."
+        },
+        {
+          "name": "HandyNotes",
+          "downloadUrl": "https://warperia.com/wp-content/uploads/2024/11/ww-wotlk-handynotes.zip",
+          "description": "Map/minimap note framework, used by NemesisTracker's affix pins."
+        }
+      ]
     },
     {
       "name": "DungeonClear",
