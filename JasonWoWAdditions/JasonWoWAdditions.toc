@@ -2,7 +2,7 @@
 ## Title: JasonWoWAdditions
 ## Notes: Campaign progression front end for the server's .progress system. Type /prog to open.
 ## Author: Jason
-## Version: 1.2.0
+## Version: 1.2.1
 ## SavedVariables: JasonWoWAdditionsDB
 
 Core.lua

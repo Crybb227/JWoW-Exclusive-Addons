@@ -65,6 +65,7 @@ function JWA:RequestStatus(force)
         return
     end
 
+    self.activityElapsed, self.rosterElapsed = 0, 0
     self.state.lastRequestAt = now
     self.state.connectionState = "requesting"
     self.state.lastError = nil
@@ -179,13 +180,23 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
--- Keep the visible bot controls and compact status current, including cancellation by movement.
-eventFrame:SetScript("OnUpdate", function(_, elapsed)
-    JWA.activityElapsed = (JWA.activityElapsed or 0) + elapsed
-    if JWA.activityElapsed < 5 then return end
-    JWA.activityElapsed = 0
-    if JWA.UI and JWA.UI.frame and JWA.UI.frame:IsShown() and JWA.db
-        and (JWA.db.tinyMode or JWA.db.lastTab == "bots") then
-        JWA:RequestStatus(false)
+-- Poll only the visible bot UI. Activity has no database query; the roster is separate.
+function JWA:PollBotStatus(elapsed)
+    if not self.UI or not self.UI.frame or not self.UI.frame:IsShown() or not self.db then
+        self.activityElapsed, self.rosterElapsed = 0, 0
+        return
     end
-end)
+    self.activityElapsed = (self.activityElapsed or 0) + elapsed
+    self.rosterElapsed = (self.rosterElapsed or 0) + elapsed
+    if not self.state.activitySupported then return end -- Older servers: explicit refresh only.
+    if self.activityElapsed >= 5 then
+        self.activityElapsed = 0
+        SendChatMessage(".progress addon activity", "SAY")
+    end
+    if self.rosterElapsed >= 30 and not self.db.tinyMode and self.db.lastTab == "bots" then
+        self.rosterElapsed = 0
+        SendChatMessage(".progress addon bots", "SAY")
+    end
+end
+
+eventFrame:SetScript("OnUpdate", function(_, elapsed) JWA:PollBotStatus(elapsed) end)

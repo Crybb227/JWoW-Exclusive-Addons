@@ -50,6 +50,12 @@ function JWA:RequestAltPartyAdd(charName, controlled)
     self:ScheduleStatusRefresh(0.75)
 end
 
+function JWA:RequestAltPartyRemove(charName)
+    if not charName or charName == "" then return end
+    UninviteUnit(charName)
+    self:ScheduleStatusRefresh(0.75)
+end
+
 function JWA:RequestAltPartyOff()
     SendChatMessage(".altparty off", "SAY")
     self:ScheduleStatusRefresh(0.75)

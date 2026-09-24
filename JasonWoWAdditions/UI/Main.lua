@@ -225,6 +225,28 @@ function UI:SelectTab(tabKey)
     end
 end
 
+function UI:InstallWindowMouseHandlers(frame)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnMouseDown", function(self)
+        self.jwaDragged = false
+    end)
+    frame:SetScript("OnDragStart", function(self)
+        self.jwaDragged = true
+        self:StartMoving()
+    end)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        UI:SavePosition()
+    end)
+    frame:SetScript("OnMouseUp", function(self, button)
+        if self.jwaDragged then return end
+        if JWA.db.tinyMode then
+            if button == "RightButton" then JWA:ToggleTinyMode()
+            elseif button == "LeftButton" then JWA:RequestToggleTakeover() end
+        end
+    end)
+end
+
 function UI:Create()
     if self.frame then
         return
@@ -248,24 +270,12 @@ function UI:Create()
         insets = { left = 11, right = 12, top = 12, bottom = 11 },
     })
 
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        UI:SavePosition()
-    end)
-    -- Right-click anywhere on the tiny bar expands back to the full window (matches
-    -- DungeonClear's tiny-mode convention); no-ops in full mode. Left-drag still moves
-    -- the frame via RegisterForDrag above - this is a separate, unrelated mouse button.
-    frame:SetScript("OnMouseUp", function(self, button)
-        if button == "RightButton" and JWA.db.tinyMode then
-            JWA:ToggleTinyMode()
-        end
-    end)
+    self:InstallWindowMouseHandlers(frame)
     frame:SetScript("OnEnter", function(self)
         if not JWA.db.tinyMode then return end
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:AddLine("JasonWoWAdditions")
+        GameTooltip:AddLine("Left-click to toggle AFK takeover; drag to move", 0.8, 0.8, 0.8, true)
         GameTooltip:AddLine("Right-click to expand the window", 0.8, 0.8, 0.8, true)
         GameTooltip:Show()
     end)
@@ -287,6 +297,21 @@ function UI:Create()
     title:SetText("Campaign Progression")
     SetColor(title, COLOR_GOLD)
     self.title = title
+
+    local titleHitArea = CreateFrame("Frame", nil, frame)
+    titleHitArea:SetSize(320, 28)
+    titleHitArea:SetPoint("TOP", frame, "TOP", 0, 8)
+    titleHitArea:EnableMouse(true)
+    titleHitArea:RegisterForDrag("LeftButton")
+    titleHitArea:SetScript("OnDragStart", function() frame:StartMoving() end)
+    titleHitArea:SetScript("OnDragStop", function()
+        frame:StopMovingOrSizing()
+        UI:SavePosition()
+    end)
+    titleHitArea:SetScript("OnMouseUp", function(_, button)
+        if button == "RightButton" then JWA:ToggleTinyMode() end
+    end)
+    self.titleHitArea = titleHitArea
 
     local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
@@ -339,7 +364,7 @@ function UI:Create()
 
     local tinyButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
     tinyButton:SetSize(50, 22)
-    tinyButton:SetPoint("RIGHT", refreshButton, "LEFT", -8, 0)
+    tinyButton:SetPoint("RIGHT", closeButton, "LEFT", -2, 0)
     tinyButton:SetText("Tiny")
     tinyButton:SetScript("OnClick", function() JWA:ToggleTinyMode() end)
     self.tinyButton = tinyButton
@@ -425,6 +450,7 @@ function UI:ApplyTinyMode()
 
     if tiny then
         self.title:Hide()
+        self.titleHitArea:Hide()
         self.titleBackground:Hide()
         self.closeButton:Hide()
         self.phaseText:Hide()
@@ -450,6 +476,7 @@ function UI:ApplyTinyMode()
         self.tinyText:Hide()
 
         self.title:Show()
+        self.titleHitArea:Show()
         self.titleBackground:Show()
         self.closeButton:Show()
         self.phaseText:Show()

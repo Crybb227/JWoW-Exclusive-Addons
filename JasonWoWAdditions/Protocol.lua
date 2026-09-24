@@ -11,7 +11,8 @@ local JWA = JasonWoWAdditions
 --   V2:NODE:id:category:label:complete:achievementId:catchupCeiling:levelCap
 --   V2:OBJECTIVE:id:category:label:group:individuallyComplete:groupComplete:groupRequired
 --   V2:BOT:guid:name:level:inGroup:catchupRate:controlled:online -- account alts
---   V2:TAKEOVER:activity:target
+--   V2:TAKEOVER:activity:target:active:groupCount
+--   V2:BOTS_BEGIN / V2:BOTS_END -- asynchronous roster snapshot boundaries
 --   V2:END
 
 local function splitPreserveEmpty(message, delimiter)
@@ -221,8 +222,9 @@ function JWA:ParseServerPayload(payload)
         self.state.nodeOrder = {}
         self.state.objectives = {}
         self.state.objectiveOrder = {}
-        self.state.bots = {}
-        self.state.botOrder = {}
+        -- Keep the displayed roster until its asynchronous replacement is complete.
+        self.state.bots = self.state.bots or {}
+        self.state.botOrder = self.state.botOrder or {}
         if self.UI then
             self.UI:RefreshAll()
         end
@@ -294,20 +296,42 @@ function JWA:ParseServerPayload(payload)
 
     if opcode == "TAKEOVER" then
         self.state.takeover = { activity = fields[3] or "", target = fields[4] or "" }
+        if fields[5] and self.state.status then
+            self.state.activitySupported = true
+            self.state.status.takeoverActive = toBool(fields[5])
+            self.state.status.altPartyCount = tonumber(fields[6]) or 0
+        end
+        if self.UI then
+            if self.UI.RefreshBots then self.UI:RefreshBots() end
+            if self.db and self.db.tinyMode then self.UI:RefreshTinyBar() end
+        end
+        return
+    end
+
+    if opcode == "BOTS_BEGIN" then
+        self.state.pendingBots = { bots = {}, order = {} }
+        return
+    end
+
+    if opcode == "BOTS_END" then
+        local pending = self.state.pendingBots
+        if not pending then return end
+        self.state.bots, self.state.botOrder = pending.bots, pending.order
+        self.state.pendingBots = nil
+        self.state.rosterReceived = true
+        if self.UI and self.UI.RefreshBots then self.UI:RefreshBots() end
         return
     end
 
     if opcode == "BOT" then
         local bot = self:ParseBotFields(fields)
-        if bot.guid ~= "" and not self.state.bots[bot.guid] then
-            table.insert(self.state.botOrder, bot.guid)
-        end
-        if bot.guid ~= "" then
-            self.state.bots[bot.guid] = bot
-        end
-        if self.UI then
-            self.UI:RefreshAll()
-        end
+        local pending = self.state.pendingBots
+        local bots = pending and pending.bots or self.state.bots
+        local order = pending and pending.order or self.state.botOrder
+        if bot.guid ~= "" and not bots[bot.guid] then table.insert(order, bot.guid) end
+        if bot.guid ~= "" then bots[bot.guid] = bot end
+        -- Older servers send unframed rows. Keep these usable without clearing on STATUS.
+        if not pending and self.UI and self.UI.RefreshBots then self.UI:RefreshBots() end
         return
     end
 

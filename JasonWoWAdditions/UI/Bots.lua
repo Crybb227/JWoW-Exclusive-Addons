@@ -98,7 +98,7 @@ function UI:RefreshBots()
         row:Show()
         local bot = bots[index]
         if not bot then
-            row.text:SetText(status and "No account alts received." or "Loading account alts...")
+            row.text:SetText(JWA.state.rosterReceived and "No account alts available." or "Loading account alts...")
             row.status:SetText("")
             row.rateValue:SetText("")
             row.ratePlus:Hide()
@@ -112,9 +112,12 @@ function UI:RefreshBots()
             row.ratePlus:Show()
             row.rateMinus:Show()
             row.addButton:Show()
-            row.addButton:SetText(bot.inGroup and "In group" or "Add to group")
-            row.addButton:SetScript("OnClick", function() JWA:RequestAltPartyAdd(bot.name, bot.controlled) end)
-            if bot.inGroup or (bot.online and not bot.controlled) then
+            row.addButton:SetText(bot.inGroup and "Remove from group" or "Add to group")
+            row.addButton:SetScript("OnClick", function()
+                if bot.inGroup then JWA:RequestAltPartyRemove(bot.name)
+                else JWA:RequestAltPartyAdd(bot.name, bot.controlled) end
+            end)
+            if bot.online and not bot.controlled then
                 row.addButton:Disable()
             else
                 row.addButton:Enable()
