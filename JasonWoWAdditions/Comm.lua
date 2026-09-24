@@ -37,6 +37,42 @@ function JWA:RequestXPRateChange(rate)
     self:ScheduleStatusRefresh(0.75)
 end
 
+function JWA:RequestAltPartyAdd(charName)
+    if not charName or charName == "" then
+        return
+    end
+
+    SendChatMessage(string.format(".altparty %s", charName), "SAY")
+    self:ScheduleStatusRefresh(0.75)
+end
+
+function JWA:RequestAltPartyOff()
+    SendChatMessage(".altparty off", "SAY")
+    self:ScheduleStatusRefresh(0.75)
+end
+
+function JWA:RequestToggleTakeover()
+    SendChatMessage(".afk", "SAY")
+    self:ScheduleStatusRefresh(0.75)
+end
+
+function JWA:RequestBotXPRateChange(botName, rate)
+    rate = tonumber(rate)
+    if not rate or not botName or botName == "" then
+        return
+    end
+
+    rate = math.floor(rate)
+
+    local status = self.state.status
+    if status and (rate < status.minRate or rate > status.maxRate) then
+        return
+    end
+
+    SendChatMessage(string.format(".progress xp rate %d %s", rate, botName), "SAY")
+    self:ScheduleStatusRefresh(0.75)
+end
+
 function JWA:RequestToggleTracking(resourceKey)
     if not resourceKey or resourceKey == "" then
         return

@@ -217,3 +217,33 @@ end
 function JWA:GetVanillaSummary()
     if self.state.status and self.state.status.levelCap >= 60 then return self.state.vanillaSummary end
 end
+
+function JWA:GetOrderedBots()
+    local ordered = {}
+    for _, guid in ipairs(self.state.botOrder) do
+        local bot = self.state.bots[guid]
+        if bot then
+            table.insert(ordered, bot)
+        end
+    end
+    return ordered
+end
+
+function JWA:GetInGroupBotCount()
+    local status = self.state.status
+    if status and status.altPartyCount ~= nil then
+        return status.altPartyCount
+    end
+
+    local count = 0
+    for _, bot in ipairs(self:GetOrderedBots()) do
+        if bot.inGroup then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+function JWA:IsTakeoverActive()
+    return self.state.status ~= nil and self.state.status.takeoverActive
+end

@@ -73,7 +73,8 @@ function UI:CreateOptionsPanel()
     tabNote:SetPoint("TOPLEFT", scaleSlider, "BOTTOMLEFT", -4, -28)
     tabNote:SetWidth(500)
     tabNote:SetJustifyH("LEFT")
-    tabNote:SetText("The window always reopens on the last tab you had open (Overview, Campaign, Nemesis, Tracking, or Stats).")
+    tabNote:SetText("The window always reopens on the last tab you had open (Overview, Campaign, Bots, Nemesis, " ..
+        "Tracking, or Stats). Use /prog tiny or the Tiny button to collapse it to a small status bar.")
     UI.SetColor(tabNote, UI.COLOR_GREY)
 
     panel.refresh = function()

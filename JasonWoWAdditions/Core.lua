@@ -16,6 +16,8 @@ JWA.state = {
     nodeOrder = {},
     objectives = {},               -- objectiveId -> parsed V2:OBJECTIVE fields
     objectiveOrder = {},
+    bots = {},                     -- botGuid -> parsed V2:BOT fields (altparty bots)
+    botOrder = {},
     pendingRateChange = nil,
     lastError = nil,
 }
@@ -25,6 +27,7 @@ local DEFAULTS = {
     lastTab = "overview",
     showOnStartup = false,
     uiScale = 1.0,
+    tinyMode = false,
 }
 
 local eventFrame = CreateFrame("Frame")
@@ -90,11 +93,29 @@ function JWA:ToggleWindow()
     end
 end
 
+function JWA:ToggleTinyMode()
+    if not self.UI or not self.UI.frame then
+        return
+    end
+
+    self.db.tinyMode = not self.db.tinyMode
+    if not self.UI.frame:IsShown() then
+        self.UI.frame:Show()
+        self:RequestStatus(false)
+    end
+    self.UI:ApplyTinyMode()
+end
+
 function JWA:SlashCommand(input)
     input = string.lower(input or "")
 
     if input == "refresh" then
         self:RequestStatus(true)
+        return
+    end
+
+    if input == "tiny" then
+        self:ToggleTinyMode()
         return
     end
 

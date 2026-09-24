@@ -350,6 +350,40 @@ function UI:RefreshCampaign()
         return row
     end
 
+    local sands = JWA.state.sands
+    if sands then
+        local function EventRow(text, button, command)
+            local row = EnsureRow()
+            row.text:SetText(text)
+            UI.SetColor(row.text, UI.COLOR_GOLD)
+            if button then
+                row.completeButton:SetText(button)
+                row.completeButton:SetScript("OnClick", function()
+                    SendChatMessage(command, "SAY")
+                    JWA:ScheduleStatusRefresh(0.5)
+                end)
+                row.completeButton:Show()
+            end
+        end
+        EventRow(string.format("Shifting Sands | Supplies %s | Readiness %d/%d | AQ %s",
+            sands.supplies and "ready" or "needed", sands.ready, sands.target, sands.open and "OPEN" or "closed"))
+        EventRow(sands.seconds > 0 and string.format("Invasion active - about %d minutes left (Refresh to update)",
+            math.ceil(sands.seconds / 60)) or "Invasion inactive - prepared friends may replay after the cooldown",
+            sands.replay and "Replay" or nil, ".progress replay")
+        EventRow("Preparation: " .. (sands.prepared and "complete" or "20 fragments OR 3 distinct enemies at one hive"),
+            "Fragments", ".progress fragments")
+        EventRow(string.format("Defense: %d/%d invasion kills | Nearby group members receive credit",
+            sands.defense, sands.defenseTarget))
+        EventRow(sands.gong and "Gong eligible - visit the physical Scarab Gong in southern Silithus" or
+            (sands.open and "The gates remain open during and after replays" or
+            "Gong needs supplies, readiness, and your preparation"), sands.gong and "Gong" or nil, ".progress gong")
+        EventRow(sands.claim == 2 and "Scarab Lord + Black Qiraji Battle Tank: claimed" or
+            (sands.claim == 1 and "Both rewards ready to claim" or "Both rewards need preparation + defense"),
+            sands.claim == 1 and "Claim" or nil, ".progress scarab")
+        EventRow("Battles at Hive'Ashi, Hive'Zora, Hive'Regal. Turn fragments in anywhere in Silithus.")
+        EventRow("Defense locations and your hive counts: .progress sands", "Details", ".progress sands")
+    end
+
     if not JWA:HasData() then
         local row = EnsureRow()
         row.text:SetText("Progression data unavailable. Click Refresh to try again.")

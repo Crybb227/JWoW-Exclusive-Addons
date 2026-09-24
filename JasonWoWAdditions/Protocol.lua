@@ -6,9 +6,11 @@ local JWA = JasonWoWAdditions
 --   V2:CHUNK:<id>:<part>:<total>:<data>                       -- reassembled before dispatch
 --   V2:STATUS:era:chapter:phase:levelCap:hardEnforce:catchupCeiling:highestHumanLevel:
 --       revision:xpEnabled:playerLevel:personalCatchupCeiling:catchupEligible:catchupRate:
---       minRate:maxRate:rateCmdEnabled:bankedXP:bankClaimEnabled:goldRate:nextMilestone
+--       minRate:maxRate:rateCmdEnabled:bankedXP:bankClaimEnabled:goldRate:nextMilestone:
+--       takeoverActive:altPartyCount
 --   V2:NODE:id:category:label:complete:achievementId:catchupCeiling:levelCap
 --   V2:OBJECTIVE:id:category:label:group:individuallyComplete:groupComplete:groupRequired
+--   V2:BOT:guid:name:level:inGroup:catchupRate                -- one row per altparty bot
 --   V2:END
 
 local function splitPreserveEmpty(message, delimiter)
@@ -76,6 +78,8 @@ function JWA:ParseStatusFields(fields)
         bankClaimEnabled = toBool(fields[i + 17]),
         goldRate = tonumber(fields[i + 18]) or 1,
         nextMilestone = tonumber(fields[i + 19]) or 0,
+        takeoverActive = toBool(fields[i + 20]),
+        altPartyCount = tonumber(fields[i + 21]) or 0,
     }
 
     return status
@@ -92,6 +96,18 @@ function JWA:ParseNodeFields(fields)
         achievementId = tonumber(fields[i + 4]) or 0,
         catchupCeiling = tonumber(fields[i + 5]) or 0,
         levelCap = tonumber(fields[i + 6]) or 0,
+    }
+end
+
+function JWA:ParseBotFields(fields)
+    -- fields[1]="V2" fields[2]="BOT", data starts at fields[3]
+    local i = 3
+    return {
+        guid = fields[i] or "",
+        name = fields[i + 1] or "?",
+        level = tonumber(fields[i + 2]) or 0,
+        inGroup = toBool(fields[i + 3]),
+        catchupRate = tonumber(fields[i + 4]) or 1,
     }
 end
 
@@ -194,15 +210,38 @@ function JWA:ParseServerPayload(payload)
         self.state.connectionState = "live"
         self.state.lastResponseAt = self:GetNow()
         self.state.vanillaSummary = nil
+        self.state.sands = nil
         self.state.vanilla = {}
         self.state.vanillaOrder = {}
         self.state.nodes = {}
         self.state.nodeOrder = {}
         self.state.objectives = {}
         self.state.objectiveOrder = {}
+        self.state.bots = {}
+        self.state.botOrder = {}
         if self.UI then
             self.UI:RefreshAll()
         end
+        return
+    end
+
+    -- Additive opcode: existing V2 STATUS/VANILLA/SUMMARY field counts are unchanged.
+    if opcode == "SANDS" then
+        if #fields ~= 13 then return end
+        local values = {}
+        for i = 3, 13 do
+            local value = tonumber(fields[i])
+            if not value or value < 0 or value % 1 ~= 0 then return end
+            values[i - 2] = value
+        end
+        if values[1] > 1 or values[3] < 1 or values[3] > 1000000 or values[2] > values[3]
+            or values[4] > 21600 or values[5] > 1 or values[6] > 1 or values[8] ~= 5
+            or values[7] > values[8] or values[9] > 1 or values[10] > 2 or values[11] > 1 then return end
+        self.state.sands = {
+            supplies = values[1] == 1, ready = values[2], target = values[3], seconds = values[4],
+            open = values[5] == 1, prepared = values[6] == 1, defense = values[7], defenseTarget = values[8],
+            gong = values[9] == 1, claim = values[10], replay = values[11] == 1,
+        }
         return
     end
 
@@ -242,6 +281,20 @@ function JWA:ParseServerPayload(payload)
         end
         if node.id ~= "" then
             self.state.nodes[node.id] = node
+        end
+        if self.UI then
+            self.UI:RefreshAll()
+        end
+        return
+    end
+
+    if opcode == "BOT" then
+        local bot = self:ParseBotFields(fields)
+        if bot.guid ~= "" and not self.state.bots[bot.guid] then
+            table.insert(self.state.botOrder, bot.guid)
+        end
+        if bot.guid ~= "" then
+            self.state.bots[bot.guid] = bot
         end
         if self.UI then
             self.UI:RefreshAll()

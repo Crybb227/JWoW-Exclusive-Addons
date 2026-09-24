@@ -192,6 +192,7 @@ end
 UI.TAB_DEFS = {
     { key = "overview", label = "Overview", panelField = "overviewPanel" },
     { key = "campaign", label = "Campaign", panelField = "campaignPanel" },
+    { key = "bots", label = "Bots", panelField = "botsPanel" },
     { key = "nemesis", label = "Nemesis", panelField = "nemesisPanel" },
     { key = "tracking", label = "Tracking", panelField = "trackingPanel" },
     { key = "stats", label = "Stats", panelField = "statsPanel" },
@@ -253,6 +254,22 @@ function UI:Create()
         self:StopMovingOrSizing()
         UI:SavePosition()
     end)
+    -- Right-click anywhere on the tiny bar expands back to the full window (matches
+    -- DungeonClear's tiny-mode convention); no-ops in full mode. Left-drag still moves
+    -- the frame via RegisterForDrag above - this is a separate, unrelated mouse button.
+    frame:SetScript("OnMouseUp", function(self, button)
+        if button == "RightButton" and JWA.db.tinyMode then
+            JWA:ToggleTinyMode()
+        end
+    end)
+    frame:SetScript("OnEnter", function(self)
+        if not JWA.db.tinyMode then return end
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("JasonWoWAdditions")
+        GameTooltip:AddLine("Right-click to expand the window", 0.8, 0.8, 0.8, true)
+        GameTooltip:Show()
+    end)
+    frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     self.frame = frame
     UI:RestorePosition()
@@ -263,6 +280,7 @@ function UI:Create()
     titleBackground:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
     titleBackground:SetSize(320, 64)
     titleBackground:SetPoint("TOP", frame, "TOP", 0, 12)
+    self.titleBackground = titleBackground
 
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", frame, "TOP", 0, -3)
@@ -273,6 +291,7 @@ function UI:Create()
     local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
     closeButton:SetScript("OnClick", function() frame:Hide() end)
+    self.closeButton = closeButton
 
     -- Header: phase / cap / character
     local phaseText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -318,22 +337,131 @@ function UI:Create()
     end)
     self.refreshButton = refreshButton
 
+    local tinyButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    tinyButton:SetSize(50, 22)
+    tinyButton:SetPoint("RIGHT", refreshButton, "LEFT", -8, 0)
+    tinyButton:SetText("Tiny")
+    tinyButton:SetScript("OnClick", function() JWA:ToggleTinyMode() end)
+    self.tinyButton = tinyButton
+
     local statusLine = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     statusLine:SetPoint("RIGHT", refreshButton, "LEFT", -10, 0)
     statusLine:SetWidth(300)
     statusLine:SetJustifyH("RIGHT")
     self.statusLine = statusLine
 
-    -- Content panels (built by Overview.lua / Campaign.lua / Nemesis.lua / Tracking.lua / Stats.lua)
+    -- Content panels (built by Overview.lua / Campaign.lua / Bots.lua / Nemesis.lua / Tracking.lua / Stats.lua)
     self.overviewPanel = self:CreateOverviewPanel(frame, contentAnchorTop)
     self.campaignPanel = self:CreateCampaignPanel(frame, contentAnchorTop)
+    self.botsPanel = self:CreateBotsPanel(frame, contentAnchorTop)
     self.nemesisPanel = self:CreateNemesisPanel(frame, contentAnchorTop)
     self.trackingPanel = self:CreateTrackingPanel(frame, contentAnchorTop)
     self.statsPanel = self:CreateStatsPanel(frame, contentAnchorTop)
 
+    self:CreateTinyBar(frame)
+
     self:SelectTab(JWA.db.lastTab or "overview")
+    self:ApplyTinyMode()
 
     self:RefreshAll()
+end
+
+-- Tiny mode: collapses the SAME window (not a separate frame) to a single-line bar showing
+-- just AFK-autopilot state, altparty bot count, and the player's own XP rate - the fields a
+-- player wants to glance at without the full window open. Matches the tiny-mode convention
+-- already used by this account's DungeonClear addon (one frame, single toggle button,
+-- right-click-anywhere-on-the-bar to expand, auto-width, position/mode saved to SavedVariables)
+-- rather than inventing a second frame/pattern.
+local TINY_HEIGHT = 26
+
+function UI:CreateTinyBar(frame)
+    local dot = frame:CreateTexture(nil, "OVERLAY")
+    dot:SetSize(14, 14)
+    dot:SetPoint("LEFT", frame, "LEFT", 10, 0)
+    dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline")
+    dot:Hide()
+    self.tinyIndicator = dot
+
+    local text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("LEFT", dot, "RIGHT", 6, 0)
+    text:Hide()
+    self.tinyText = text
+end
+
+function UI:RefreshTinyBar()
+    if not self.tinyText then
+        return
+    end
+
+    local status = JWA.state.status
+    local active = JWA:IsTakeoverActive()
+    local botCount = JWA:GetInGroupBotCount()
+
+    if active then
+        self.tinyIndicator:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online")
+    else
+        self.tinyIndicator:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline")
+    end
+
+    local afkPart = active and "|cff20e020AFK|r" or "|cff999999AFK off|r"
+    local botsPart = string.format("|cffffd100%d bot%s|r", botCount, botCount == 1 and "" or "s")
+    local ratePart = status and string.format("|cff40c0ff%dx|r", status.catchupRate) or "|cff999999--|r"
+
+    self.tinyText:SetText(afkPart .. "  |cff808080|| |r" .. botsPart .. "  |cff808080|| |r" .. ratePart)
+
+    local width = 10 + 14 + 6 + self.tinyText:GetStringWidth() + 14
+    self.frame:SetWidth(math.max(150, width))
+end
+
+function UI:ApplyTinyMode()
+    if not self.frame then
+        return
+    end
+
+    local tiny = JWA.db.tinyMode
+
+    if tiny then
+        self.title:Hide()
+        self.titleBackground:Hide()
+        self.closeButton:Hide()
+        self.phaseText:Hide()
+        self.capText:Hide()
+        self.charText:Hide()
+        self.cappedText:Hide()
+        for _, button in pairs(self.tabButtons) do button:Hide() end
+        for _, def in ipairs(UI.TAB_DEFS) do
+            local panel = self[def.panelField]
+            if panel then panel:Hide() end
+        end
+        self.refreshButton:Hide()
+        self.tinyButton:Hide()
+        self.statusLine:Hide()
+
+        self.tinyIndicator:Show()
+        self.tinyText:Show()
+
+        self.frame:SetHeight(TINY_HEIGHT)
+        self:RefreshTinyBar()
+    else
+        self.tinyIndicator:Hide()
+        self.tinyText:Hide()
+
+        self.title:Show()
+        self.titleBackground:Show()
+        self.closeButton:Show()
+        self.phaseText:Show()
+        self.capText:Show()
+        self.charText:Show()
+        self.cappedText:Show()
+        for _, button in pairs(self.tabButtons) do button:Show() end
+        self.refreshButton:Show()
+        self.tinyButton:Show()
+        self.statusLine:Show()
+
+        self.frame:SetHeight(WINDOW_HEIGHT)
+        self.frame:SetWidth(WINDOW_WIDTH)
+        self:SelectTab(JWA.db.lastTab or "overview")
+    end
 end
 
 function UI:RefreshStatus()
@@ -364,8 +492,13 @@ function UI:RefreshAll()
     self:RefreshHeader()
     self:RefreshOverview()
     self:RefreshCampaign()
+    self:RefreshBots()
     self:RefreshNemesis()
     self:RefreshTracking()
     self:RefreshStats()
     self:RefreshStatus()
+
+    if JWA.db.tinyMode then
+        self:RefreshTinyBar()
+    end
 end
