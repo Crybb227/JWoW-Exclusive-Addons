@@ -404,6 +404,9 @@ function UI:RefreshTinyBar()
     end
 
     local afkPart = active and "|cff20e020AFK|r" or "|cff999999AFK off|r"
+    if JWA.db.tinyShowActivity and active then
+        afkPart = afkPart .. " " .. JWA:GetTakeoverActivity()
+    end
     local botsPart = string.format("|cffffd100%d bot%s|r", botCount, botCount == 1 and "" or "s")
     local ratePart = status and string.format("|cff40c0ff%dx|r", status.catchupRate) or "|cff999999--|r"
 

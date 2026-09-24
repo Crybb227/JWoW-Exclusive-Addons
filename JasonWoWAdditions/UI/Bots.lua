@@ -4,69 +4,35 @@ JWA.UI = JWA.UI or {}
 local UI = JWA.UI
 
 local PANEL_WIDTH = 572
-local ROW_HEIGHT = 24
+local ROW_HEIGHT = 34
 
-local function CreateSectionHeading(parent, text)
-    local heading = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    heading:SetText(text)
-    UI.SetColor(heading, UI.COLOR_GOLD)
-    return heading
+local function Label(parent, text, x, y, width)
+    local label = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    label:SetWidth(width)
+    label:SetJustifyH("LEFT")
+    label:SetText(text)
+    return label
 end
 
-local function CreateScrollingList(parent, width, height)
-    local scrollFrame = CreateFrame("ScrollFrame", nil, parent, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetSize(width - 24, height)
-
-    local content = CreateFrame("Frame", nil, scrollFrame)
-    content:SetSize(width - 24, height)
-    scrollFrame:SetScrollChild(content)
-
-    return scrollFrame, content
+local function Button(parent, text, x, width, callback)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetSize(width, 22)
+    button:SetPoint("LEFT", parent, "LEFT", x, 0)
+    button:SetText(text)
+    button:SetScript("OnClick", callback)
+    return button
 end
-
-local botRowCount = 0
 
 local function CreateBotRow(parent)
-    botRowCount = botRowCount + 1
-    local row = CreateFrame("Frame", "JasonWoWAdditionsBotRow" .. botRowCount, parent)
-    row:SetSize(PANEL_WIDTH - 24, ROW_HEIGHT)
-
-    local rateMinus = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    rateMinus:SetSize(20, 18)
-    rateMinus:SetText("-")
-    rateMinus:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-    row.rateMinus = rateMinus
-
-    local rateValue = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    rateValue:SetPoint("RIGHT", rateMinus, "LEFT", -4, 0)
-    rateValue:SetWidth(34)
-    rateValue:SetJustifyH("CENTER")
-    row.rateValue = rateValue
-
-    local ratePlus = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    ratePlus:SetSize(20, 18)
-    ratePlus:SetText("+")
-    ratePlus:SetPoint("RIGHT", rateValue, "LEFT", -4, 0)
-    row.ratePlus = ratePlus
-
-    local removeButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    removeButton:SetSize(60, 18)
-    removeButton:SetText("Remove")
-    removeButton:SetPoint("RIGHT", ratePlus, "LEFT", -10, 0)
-    row.removeButton = removeButton
-
-    local status = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    status:SetPoint("RIGHT", removeButton, "LEFT", -10, 0)
-    status:SetWidth(70)
-    status:SetJustifyH("RIGHT")
-    row.status = status
-
-    local text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    text:SetPoint("LEFT", row, "LEFT", 0, 0)
-    text:SetPoint("RIGHT", status, "LEFT", -8, 0)
-    text:SetJustifyH("LEFT")
-    row.text = text
-
+    local row = CreateFrame("Frame", nil, parent)
+    row:SetSize(PANEL_WIDTH - 26, ROW_HEIGHT)
+    row.text = Label(row, "", 8, -5, 170)
+    row.status = Label(row, "", 184, -10, 92)
+    row.rateValue = Label(row, "", 284, -10, 38)
+    row.ratePlus = Button(row, "+", 324, 24)
+    row.rateMinus = Button(row, "-", 352, 24)
+    row.addButton = Button(row, "Add to group", 392, 138)
     return row
 end
 
@@ -76,152 +42,96 @@ function UI:CreateBotsPanel(frame, anchorAbove)
     panel:SetSize(PANEL_WIDTH, 420)
     panel:Hide()
 
-    -- Takeover / AFK autopilot toggle
-    local takeoverHeading = CreateSectionHeading(panel, "AFK AUTOPILOT")
-    takeoverHeading:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
-
-    local takeoverInset = UI.CreateInsetPanel(panel, PANEL_WIDTH, 44)
-    takeoverInset:SetPoint("TOPLEFT", takeoverHeading, "BOTTOMLEFT", 0, -6)
-
-    local takeoverStatus = takeoverInset:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    takeoverStatus:SetPoint("LEFT", takeoverInset, "LEFT", 10, 0)
-    self.takeoverStatusText = takeoverStatus
-
-    local takeoverButton = CreateFrame("Button", nil, takeoverInset, "UIPanelButtonTemplate")
-    takeoverButton:SetSize(110, 22)
-    takeoverButton:SetPoint("RIGHT", takeoverInset, "RIGHT", -10, 0)
-    takeoverButton:SetScript("OnClick", function()
+    local takeoverInset = UI.CreateInsetPanel(panel, PANEL_WIDTH, 76)
+    takeoverInset:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    self.takeoverStatusText = Label(takeoverInset, "Takeover", 10, -10, 390)
+    self.takeoverActivityText = Label(takeoverInset, "", 10, -32, 390)
+    self.takeoverButton = Button(takeoverInset, "Enable Takeover", 430, 132, function()
         JWA:RequestToggleTakeover()
     end)
-    self.takeoverButton = takeoverButton
 
-    -- Altparty bots
-    local altPartyHeading = CreateSectionHeading(panel, "ALTPARTY BOTS")
-    altPartyHeading:SetPoint("TOPLEFT", takeoverInset, "BOTTOMLEFT", 0, -14)
+    local toolbar = CreateFrame("Frame", nil, panel)
+    toolbar:SetSize(PANEL_WIDTH, 28)
+    toolbar:SetPoint("TOPLEFT", takeoverInset, "BOTTOMLEFT", 0, -10)
+    Label(toolbar, "AVAILABLE ACCOUNT ALTS", 8, -7, 350)
+    Button(toolbar, "Dismiss all bots", 430, 132, function() JWA:RequestAltPartyOff() end)
 
-    local addNameBox = CreateFrame("EditBox", "JasonWoWAdditionsAltPartyNameBox", panel, "InputBoxTemplate")
-    addNameBox:SetSize(140, 20)
-    addNameBox:SetPoint("TOPRIGHT", altPartyHeading, "TOPRIGHT", -84, 4)
-    addNameBox:SetAutoFocus(false)
-    addNameBox:SetMaxLetters(24)
-    self.altPartyNameBox = addNameBox
+    local headers = CreateFrame("Frame", nil, panel)
+    headers:SetSize(PANEL_WIDTH, 22)
+    headers:SetPoint("TOPLEFT", toolbar, "BOTTOMLEFT", 0, -4)
+    Label(headers, "Character / level", 8, 0, 170)
+    Label(headers, "Status", 184, 0, 92)
+    Label(headers, "XP rate", 284, 0, 92)
+    Label(headers, "Group", 392, 0, 138)
 
-    local addButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    addButton:SetSize(60, 20)
-    addButton:SetPoint("LEFT", addNameBox, "RIGHT", 6, 0)
-    addButton:SetText("Add")
-    local function SubmitAdd()
-        local name = addNameBox:GetText()
-        if name and name ~= "" then
-            JWA:RequestAltPartyAdd(name)
-            addNameBox:SetText("")
-            addNameBox:ClearFocus()
-        end
-    end
-    addButton:SetScript("OnClick", SubmitAdd)
-    addNameBox:SetScript("OnEnterPressed", SubmitAdd)
-    addNameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    local scroll = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
+    scroll:SetSize(PANEL_WIDTH - 26, 238)
+    scroll:SetPoint("TOPLEFT", headers, "BOTTOMLEFT", 0, 0)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetSize(PANEL_WIDTH - 26, 238)
+    scroll:SetScrollChild(content)
+    self.botsScroll, self.botsContent, self.botsRows = scroll, content, {}
 
-    local offButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    offButton:SetSize(50, 20)
-    offButton:SetPoint("LEFT", addButton, "RIGHT", 6, 0)
-    offButton:SetText("Off")
-    offButton:SetScript("OnClick", function()
-        JWA:RequestAltPartyOff()
-    end)
-
-    local scrollFrame, scrollContent = CreateScrollingList(panel, PANEL_WIDTH, 250)
-    scrollFrame:SetPoint("TOPLEFT", altPartyHeading, "BOTTOMLEFT", 0, -30)
-    self.botsScroll = scrollFrame
-    self.botsContent = scrollContent
-    self.botsRows = {}
-
-    local hint = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    hint:SetPoint("TOPLEFT", scrollFrame, "BOTTOMLEFT", 0, -8)
-    hint:SetWidth(PANEL_WIDTH)
-    hint:SetJustifyH("LEFT")
-    hint:SetText("Type a same-account character's name and click Add to bring it along as a bot. " ..
-        "\"Off\" logs out every altparty bot. Each bot's rate is its own campaign catch-up multiplier.")
+    local hint = Label(panel, "XP rate is the saved campaign catch-up multiplier; eligibility and caps still apply. " ..
+        "Add to group summons an offline alt. Dismiss all bots logs out your entire altparty.", 0, -390, PANEL_WIDTH)
     UI.SetColor(hint, UI.COLOR_GREY)
-
     return panel
 end
 
 function UI:RefreshBots()
-    if not self.takeoverStatusText then
-        return
-    end
-
+    if not self.takeoverStatusText then return end
     local status = JWA.state.status
     local active = JWA:IsTakeoverActive()
-
-    if active then
-        self.takeoverStatusText:SetText("AFK autopilot is |cff20e020ACTIVE|r - the bot AI is playing your character.")
-        self.takeoverButton:SetText("Cancel Takeover")
-    else
-        self.takeoverStatusText:SetText("AFK autopilot is |cff999999off|r.")
-        self.takeoverButton:SetText("Enable Takeover")
-    end
-
-    local rowIndex = 0
-    local function EnsureRow()
-        rowIndex = rowIndex + 1
-        local row = self.botsRows[rowIndex]
-        if not row then
-            row = CreateBotRow(self.botsContent)
-            self.botsRows[rowIndex] = row
-        end
-        row:SetPoint("TOPLEFT", self.botsContent, "TOPLEFT", 4, -((rowIndex - 1) * ROW_HEIGHT))
-        row:Show()
-        return row
-    end
+    self.takeoverStatusText:SetText(active and "Takeover: |cff20e020ACTIVE|r" or "Takeover: off")
+    self.takeoverActivityText:SetText(JWA:GetTakeoverActivity())
+    self.takeoverButton:SetText(active and "Cancel Takeover" or "Enable Takeover")
+    if status then self.takeoverButton:Enable() else self.takeoverButton:Disable() end
 
     local bots = JWA:GetOrderedBots()
-    if #bots == 0 then
-        local row = EnsureRow()
-        row.text:SetText("No altparty bots. Add one above.")
-        UI.SetColor(row.text, UI.COLOR_GREY)
-        row.status:SetText("")
-        row.removeButton:Hide()
-        row.rateMinus:Hide()
-        row.ratePlus:Hide()
-        row.rateValue:SetText("")
-    else
-        for _, bot in ipairs(bots) do
-            local row = EnsureRow()
-            row.text:SetText(string.format("%s (level %d)", bot.name, bot.level))
-            UI.SetColor(row.text, bot.inGroup and UI.COLOR_WHITE or UI.COLOR_GREY)
-
-            row.status:SetText(bot.inGroup and "|cff20e020in group|r" or "|cff999999not in group|r")
-
-            row.removeButton:Show()
-            -- Removing a single altparty bot isn't exposed server-side (.altparty off logs
-            -- out all of them) - Remove logs the whole altparty out, same as the header Off
-            -- button. Kept as its own per-row button since that's the natural place a
-            -- player looks for it.
-            row.removeButton:SetScript("OnClick", function()
-                JWA:RequestAltPartyOff()
-            end)
-
-            row.rateMinus:Show()
-            row.ratePlus:Show()
+    for index = 1, math.max(1, #bots) do
+        local row = self.botsRows[index]
+        if not row then
+            row = CreateBotRow(self.botsContent)
+            self.botsRows[index] = row
+        end
+        row:SetPoint("TOPLEFT", self.botsContent, "TOPLEFT", 0, -((index - 1) * ROW_HEIGHT))
+        row:Show()
+        local bot = bots[index]
+        if not bot then
+            row.text:SetText(status and "No account alts received." or "Loading account alts...")
+            row.status:SetText("")
+            row.rateValue:SetText("")
+            row.ratePlus:Hide()
+            row.rateMinus:Hide()
+            row.addButton:Hide()
+        else
+            row.text:SetText(string.format("%s\n|cff999999Level %d|r", bot.name, bot.level))
+            row.status:SetText(bot.inGroup and "|cff20e020In group|r"
+                or bot.controlled and "Summoned" or bot.online and "Online" or "Available")
             row.rateValue:SetText(string.format("%dx", bot.catchupRate))
-            row.rateMinus:SetScript("OnClick", function()
-                JWA:RequestBotXPRateChange(bot.name, bot.catchupRate - 1)
-            end)
+            row.ratePlus:Show()
+            row.rateMinus:Show()
+            row.addButton:Show()
+            row.addButton:SetText(bot.inGroup and "In group" or "Add to group")
+            row.addButton:SetScript("OnClick", function() JWA:RequestAltPartyAdd(bot.name, bot.controlled) end)
+            if bot.inGroup or (bot.online and not bot.controlled) then
+                row.addButton:Disable()
+            else
+                row.addButton:Enable()
+            end
             row.ratePlus:SetScript("OnClick", function()
                 JWA:RequestBotXPRateChange(bot.name, bot.catchupRate + 1)
             end)
-            if status then
-                if bot.catchupRate > status.minRate then row.rateMinus:Enable() else row.rateMinus:Disable() end
-                if bot.catchupRate < status.maxRate then row.ratePlus:Enable() else row.ratePlus:Disable() end
-            end
+            row.rateMinus:SetScript("OnClick", function()
+                JWA:RequestBotXPRateChange(bot.name, bot.catchupRate - 1)
+            end)
+            local editable = status and status.rateCmdEnabled and (not bot.online or bot.controlled)
+            if editable and bot.catchupRate < status.maxRate then row.ratePlus:Enable()
+            else row.ratePlus:Disable() end
+            if editable and bot.catchupRate > status.minRate then row.rateMinus:Enable()
+            else row.rateMinus:Disable() end
         end
     end
-
-    for index = rowIndex + 1, #self.botsRows do
-        self.botsRows[index]:Hide()
-    end
-
-    self.botsContent:SetHeight(math.max(1, rowIndex * ROW_HEIGHT))
+    for index = math.max(1, #bots) + 1, #self.botsRows do self.botsRows[index]:Hide() end
+    self.botsContent:SetHeight(math.max(1, #bots) * ROW_HEIGHT)
 end

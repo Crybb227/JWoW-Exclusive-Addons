@@ -10,7 +10,8 @@ local JWA = JasonWoWAdditions
 --       takeoverActive:altPartyCount
 --   V2:NODE:id:category:label:complete:achievementId:catchupCeiling:levelCap
 --   V2:OBJECTIVE:id:category:label:group:individuallyComplete:groupComplete:groupRequired
---   V2:BOT:guid:name:level:inGroup:catchupRate                -- one row per altparty bot
+--   V2:BOT:guid:name:level:inGroup:catchupRate:controlled:online -- account alts
+--   V2:TAKEOVER:activity:target
 --   V2:END
 
 local function splitPreserveEmpty(message, delimiter)
@@ -108,6 +109,8 @@ function JWA:ParseBotFields(fields)
         level = tonumber(fields[i + 2]) or 0,
         inGroup = toBool(fields[i + 3]),
         catchupRate = tonumber(fields[i + 4]) or 1,
+        controlled = fields[i + 5] == nil or toBool(fields[i + 5]),
+        online = fields[i + 6] == nil or toBool(fields[i + 6]),
     }
 end
 
@@ -206,6 +209,7 @@ function JWA:ParseServerPayload(payload)
 
     if opcode == "STATUS" then
         self.state.chunks = {} -- Previous partial rows cannot enter this snapshot.
+        self.state.takeover = nil
         self.state.status = self:ParseStatusFields(fields)
         self.state.connectionState = "live"
         self.state.lastResponseAt = self:GetNow()
@@ -285,6 +289,11 @@ function JWA:ParseServerPayload(payload)
         if self.UI then
             self.UI:RefreshAll()
         end
+        return
+    end
+
+    if opcode == "TAKEOVER" then
+        self.state.takeover = { activity = fields[3] or "", target = fields[4] or "" }
         return
     end
 

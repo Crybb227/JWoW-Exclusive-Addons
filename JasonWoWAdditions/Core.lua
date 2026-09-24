@@ -28,6 +28,7 @@ local DEFAULTS = {
     showOnStartup = false,
     uiScale = 1.0,
     tinyMode = false,
+    tinyShowActivity = true,
 }
 
 local eventFrame = CreateFrame("Frame")
@@ -175,5 +176,16 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
             JWA:ParseTrackingPayload(message)
         end
         return
+    end
+end)
+
+-- Keep the visible bot controls and compact status current, including cancellation by movement.
+eventFrame:SetScript("OnUpdate", function(_, elapsed)
+    JWA.activityElapsed = (JWA.activityElapsed or 0) + elapsed
+    if JWA.activityElapsed < 5 then return end
+    JWA.activityElapsed = 0
+    if JWA.UI and JWA.UI.frame and JWA.UI.frame:IsShown() and JWA.db
+        and (JWA.db.tinyMode or JWA.db.lastTab == "bots") then
+        JWA:RequestStatus(false)
     end
 end)

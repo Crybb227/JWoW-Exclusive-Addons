@@ -37,12 +37,16 @@ function JWA:RequestXPRateChange(rate)
     self:ScheduleStatusRefresh(0.75)
 end
 
-function JWA:RequestAltPartyAdd(charName)
+function JWA:RequestAltPartyAdd(charName, controlled)
     if not charName or charName == "" then
         return
     end
 
-    SendChatMessage(string.format(".altparty %s", charName), "SAY")
+    if controlled then
+        InviteUnit(charName)
+    else
+        SendChatMessage(string.format(".altparty %s", charName), "SAY")
+    end
     self:ScheduleStatusRefresh(0.75)
 end
 

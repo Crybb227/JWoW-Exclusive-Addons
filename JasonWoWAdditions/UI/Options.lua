@@ -7,8 +7,9 @@ local MIN_SCALE = 0.7
 local MAX_SCALE = 1.3
 local SCALE_STEP = 0.05
 
-local function CreateCheckbox(parent, label, tooltip)
-    local checkbox = CreateFrame("CheckButton", "JasonWoWAdditionsOptionsShowOnStartup", parent, "InterfaceOptionsCheckButtonTemplate")
+local function CreateCheckbox(parent, label, tooltip, name)
+    local checkbox = CreateFrame("CheckButton", name or "JasonWoWAdditionsOptionsShowOnStartup",
+        parent, "InterfaceOptionsCheckButtonTemplate")
     getglobal(checkbox:GetName() .. "Text"):SetText(label)
     checkbox.tooltipText = label
     checkbox.tooltipRequirement = tooltip
@@ -77,7 +78,16 @@ function UI:CreateOptionsPanel()
         "Tracking, or Stats). Use /prog tiny or the Tiny button to collapse it to a small status bar.")
     UI.SetColor(tabNote, UI.COLOR_GREY)
 
+    local tinyActivity = CreateCheckbox(panel, "Show takeover activity in tiny mode",
+        "Include the current activity and target in the compact status bar.", "JasonWoWAdditionsOptionsTinyActivity")
+    tinyActivity:SetPoint("TOPLEFT", tabNote, "BOTTOMLEFT", -2, -16)
+    tinyActivity:SetScript("OnClick", function(button)
+        JWA.db.tinyShowActivity = button:GetChecked() and true or false
+        if JWA.db.tinyMode then UI:RefreshTinyBar() end
+    end)
+
     panel.refresh = function()
+        tinyActivity:SetChecked(JWA.db.tinyShowActivity and true or false)
         showOnStartup:SetChecked(JWA.db.showOnStartup and true or false)
         local scale = JWA.db.uiScale or 1.0
         scaleSlider:SetValue(scale)

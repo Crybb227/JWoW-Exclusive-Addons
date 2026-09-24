@@ -226,6 +226,7 @@ function JWA:GetOrderedBots()
             table.insert(ordered, bot)
         end
     end
+    table.sort(ordered, function(a, b) return a.name < b.name end)
     return ordered
 end
 
@@ -246,4 +247,14 @@ end
 
 function JWA:IsTakeoverActive()
     return self.state.status ~= nil and self.state.status.takeoverActive
+end
+
+function JWA:GetTakeoverActivity()
+    if not self.state.status then return "Waiting for server status..." end
+    if not self:IsTakeoverActive() then return "You are controlling your character." end
+    local takeover = self.state.takeover
+    if not takeover then return "Waiting for activity from server..." end
+    local activity = takeover.activity
+    if takeover.target ~= "" then activity = activity .. " - " .. takeover.target end
+    return activity
 end
